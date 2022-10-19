@@ -2,6 +2,7 @@
 using System;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 namespace Publisher
 {
@@ -9,28 +10,34 @@ namespace Publisher
     {
         static void Main(string[] args)
         {
-            var factory = new ConnectionFactory() { HostName = "localhost" };
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
+            var counter = 0;
+            do
             {
-                channel.QueueDeclare(queue: "dev-queue",
-                                     durable: false,
-                                     exclusive: false,
-                                     autoDelete: false,
-                                     arguments: null);
+                int timeToSleep = new Random().Next(1000, 3000);
+                Thread.Sleep(timeToSleep);
 
-                string message = "Message from publisher";
+                var factory = new ConnectionFactory() { HostName = "localhost" };
+                using (var connection = factory.CreateConnection())
+                using (var channel = connection.CreateModel())
+                {
+                    channel.QueueDeclare(queue: "dev-queue",
+                                         durable: false,
+                                         exclusive: false,
+                                         autoDelete: false,
+                                         arguments: null);
 
-                var body = Encoding.UTF8.GetBytes(message);
+                    string message = $"Message from publisher N {counter}";
 
-                channel.BasicPublish(exchange: "",
-                                     routingKey: "dev-queue",
-                                     basicProperties: null,
-                                     body: body);
+                    var body = Encoding.UTF8.GetBytes(message);
 
-                Console.WriteLine("Message is sent into Default Exchange");
-                Console.ReadKey();
-            }
+                    channel.BasicPublish(exchange: "",
+                                         routingKey: "dev-queue",
+                                         basicProperties: null,
+                                         body: body);
+
+                    Console.WriteLine($"Message is sent into Default Exchange [N:{counter++}]");
+                }
+            } while (true);
         }
     }
 }
