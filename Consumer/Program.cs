@@ -1,9 +1,9 @@
 ﻿using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using System;
-using System.Reflection;
 using System.Text;
 
-namespace Publisher
+namespace Consumer
 {
     internal class Program
     {
@@ -12,24 +12,27 @@ namespace Publisher
             var factory = new ConnectionFactory() { HostName = "localhost" };
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
-            {
+            { 
                 channel.QueueDeclare(queue: "dev-queue",
                                      durable: false,
                                      exclusive: false,
                                      autoDelete: false,
                                      arguments: null);
 
-                string message = "Message from publisher";
+                var consumer = new EventingBasicConsumer(channel);
 
-                var body = Encoding.UTF8.GetBytes(message);
+                consumer.Received += (sender, e) =>
+                {
+                    var body = e.Body;
+                    var message = Encoding.UTF8.GetString(body.ToArray());
+                    Console.WriteLine(" Received message: {0}", message);
+                };
 
-                channel.BasicPublish(exchange: "",
-                                     routingKey: "dev-queue",
-                                     basicProperties: null,
-                                     body: body);
+                channel.BasicConsume(queue: "dev-queue",
+                                     autoAck: true,
+                                     consumer: consumer);
 
-                Console.WriteLine("Message is sent into Default Exchange");
-                Console.ReadKey();
+                Console.WriteLine("Subcribed to the queue 'dev-queue'");
             }
         }
     }
